@@ -7,6 +7,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
@@ -69,4 +73,28 @@ public class WordCounterImplTest {
         wordCounter.addWord("spell");
         Assert.assertEquals(Integer.valueOf(1), wordCounter.getCount("Spell"));
     }
+
+    @Test
+    public void addWordMulti() throws InterruptedException {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        final EnglishDictionary mockEnglishDictionary = Mockito.mock(EnglishDictionary.class);
+        final Translator mockTranslator = Mockito.mock(Translator.class);
+        when(mockEnglishDictionary.isValid("flower")).thenReturn(true);
+        when(mockEnglishDictionary.isValid("play")).thenReturn(true);
+        final WordCounter wordCounter = new WordCounterImpl(mockEnglishDictionary, mockTranslator);
+        int barrierCount = 4001;
+        final CyclicBarrier barrier = new CyclicBarrier(barrierCount);
+        for (int i = 0; i < barrierCount - 1; i++) {
+            if (i % 2 == 0) {
+                executorService.submit(new AddWordRunnable(barrier, wordCounter, "flower"));
+            } else {
+                executorService.submit(new AddWordRunnable(barrier, wordCounter, "play"));
+            }
+        }
+        Thread.sleep(1000);
+        executorService.shutdown();
+        Assert.assertEquals(2000, wordCounter.getCount("flower").intValue());
+        Assert.assertEquals(2000, wordCounter.getCount("play").intValue());
+    }
+
 }
