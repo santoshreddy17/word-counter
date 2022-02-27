@@ -7,14 +7,17 @@ import com.santosh.translator.Translator;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Word Count Impl.
  */
 public class WordCounterImpl implements WordCounter {
 
-    final Map<Word, Integer> wordCountMap;
+    final Map<Word, LongAdder> wordCountMap;
     final EnglishDictionary englishDictionary;
+    final ReentrantLock lock = new ReentrantLock();
     final Translator translator;
 
     /**
@@ -24,7 +27,7 @@ public class WordCounterImpl implements WordCounter {
      * @param translator        translator.
      */
     public WordCounterImpl(final EnglishDictionary englishDictionary, final Translator translator) {
-        wordCountMap = new ConcurrentHashMap<>();
+        wordCountMap = new ConcurrentHashMap<>(4000, 0.97f, 8);
         this.englishDictionary = englishDictionary;
         this.translator = translator;
     }
@@ -38,16 +41,23 @@ public class WordCounterImpl implements WordCounter {
      */
     @Override
     public void addWord(final String stringWord) throws WordCounterException {
-        final Word word = new Word(stringWord);
-        if (englishDictionary.isValid(word.getWord())) {
-            wordCountMap.merge(word, 1, Integer::sum);
-        } else {
-            final String englishWord = translator.translate(word.getWord());
-            if (englishWord != null) {
-                wordCountMap.merge(new Word(englishWord), 1, Integer::sum);
+        lock.lock();
+        try {
+            final Word word = new Word(stringWord);
+            if (englishDictionary.isValid(word.getWord())) {
+                wordCountMap.computeIfAbsent(word, v -> new LongAdder()).increment();
             } else {
-                throw new WordCounterException("Invalid word, no matching words found in english dictionary or translate for :" + word.getWord());
+                final String englishWord = translator.translate(word.getWord());
+                if (englishWord != null) {
+                    Word traslatedWord = new Word(englishWord);
+                    wordCountMap.computeIfAbsent(traslatedWord, v -> new LongAdder()).increment();
+                } else {
+                    throw new WordCounterException("Invalid word, no matching words found in english dictionary or translate for :" + word.getWord());
+                }
             }
+            System.out.println(stringWord + "::" + getCount(stringWord));
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -59,16 +69,16 @@ public class WordCounterImpl implements WordCounter {
      * @return Integer.
      */
     @Override
-    public Integer getCount(final String stringWord) {
+    public Long getCount(final String stringWord) {
         final Word word = new Word(stringWord);
         if (!wordCountMap.containsKey(word)) {
             final String translate = translator.translate(stringWord);
             if (translate != null) {
-                return wordCountMap.getOrDefault(new Word(translate), 0);
+                return wordCountMap.getOrDefault(new Word(translate), new LongAdder()).sum();
             }
         } else {
-            return wordCountMap.getOrDefault(word, 0);
+            return wordCountMap.getOrDefault(word, new LongAdder()).sum();
         }
-        return 0;
+        return Long.getLong("0");
     }
 }

@@ -20,5 +20,5 @@ public interface WordCounter {
      * @param word word get the count of.
      * @return count of word passed.
      */
-    Integer getCount(String word);
+    Long getCount(String word);
 }
