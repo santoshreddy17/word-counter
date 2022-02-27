@@ -40,11 +40,11 @@ public class WordCounterImpl implements WordCounter {
     public void addWord(final String stringWord) throws WordCounterException {
         final Word word = new Word(stringWord);
         if (englishDictionary.isValid(word.getWord())) {
-            wordCountMap.merge(word, 1, Integer::sum);
+            wordCountMap.compute(word, (k, v) -> v == null ? 1 : v + 1);
         } else {
             final String englishWord = translator.translate(word.getWord());
             if (englishWord != null) {
-                wordCountMap.merge(new Word(englishWord), 1, Integer::sum);
+                wordCountMap.compute(new Word(englishWord), (k, v) -> v == null ? 1 : v + 1);
             } else {
                 throw new WordCounterException("Invalid word, no matching words found in english dictionary or translate for :" + word.getWord());
             }
