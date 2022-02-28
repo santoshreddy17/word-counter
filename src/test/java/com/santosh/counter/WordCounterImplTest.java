@@ -1,5 +1,6 @@
 package com.santosh.counter;
 
+import com.santosh.AddWordRunnable;
 import com.santosh.dictionary.EnglishDictionary;
 import com.santosh.exception.WordCounterException;
 import com.santosh.translator.Translator;
@@ -90,6 +91,8 @@ public class WordCounterImplTest {
             } else {
                 executorService.submit(new AddWordRunnable(barrier, wordCounter, "play"));
             }
+
+//            executorService.submit(new AddWordRunnable(barrier, wordCounter, "flower"));
         }
         Thread.sleep(1000);
         executorService.shutdown();

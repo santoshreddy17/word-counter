@@ -49,6 +49,7 @@ public class WordCounterImpl implements WordCounter {
                 throw new WordCounterException("Invalid word, no matching words found in english dictionary or translate for :" + word.getWord());
             }
         }
+        System.out.println((stringWord + " count : " + getCount(stringWord)));
     }
 
     /**
